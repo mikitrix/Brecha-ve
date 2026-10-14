@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brecha VE</title>
+<meta name="theme-color" content="#FFE3EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="description" content="Brecha entre el dólar BCV y Binance P2P, con calculadora de ganancia.">
+<meta name="apple-mobile-web-app-title" content="Brecha VE">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: una columna de teléfono — brecha grande arriba, tasas en pastillas, calculadora, ganancia, historial */
+:root{
+  --ink:#3B3355; --muted:#8A84A3; --pink:#E9679C; --pink-soft:#FFD6E6;
+  --blue:#5B8DE0; --blue-soft:#D6E5FF; --card:rgba(255,255,255,.72); --line:#EEDFF0;
+  --bg1:#FFE3EE; --bg2:#F3E6FA; --bg3:#DCEAFF;
+  --font:"Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{background:var(--bg2)}
+body{font-family:var(--font);color:var(--ink);background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%) fixed;background-color:var(--bg2);min-height:100vh;-webkit-tap-highlight-color:transparent}
+body{margin:0}
+.app{max-width:440px;margin:0 auto;padding-inline:16px;padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-weight:700;font-size:1.15rem;letter-spacing:-.01em}
+.brand span{color:var(--pink)}
+.fresh{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);background:var(--card);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#7BC9A0}
+.dot.old{background:#F0B35A}
+
+.hero{background:var(--card);border-radius:28px;padding:22px 20px 18px;display:flex;flex-direction:column;gap:4px;backdrop-filter:blur(8px)}
+.eyebrow{font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.gap{font-size:4.2rem;font-weight:700;line-height:1;color:var(--pink);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.gap small{font-size:2rem;font-weight:600}
+.hero p{margin:4px 0 0;font-size:.85rem;color:var(--muted)}
+.hero p b{color:var(--ink);font-weight:600}
+
+.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rate{background:var(--card);border-radius:18px;padding:11px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.rate .eyebrow{font-size:.6rem}
+.rate strong{font-size:1.02rem;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.rate.usd strong{color:var(--blue)} .rate.p2p strong{color:var(--pink)}
+.rate em{font-style:normal;font-size:.62rem;color:var(--muted)}
+
+.calc{background:var(--card);border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.amount{display:flex;align-items:center;gap:8px;background:#fff;border-radius:18px;padding:6px 16px;border:2px solid transparent;transition:border-color .15s}
+.amount:focus-within{border-color:var(--pink-soft)}
+.amount span{font-size:1.6rem;font-weight:600;color:var(--blue)}
+.amount input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:600 1.9rem/1.3 var(--font);color:var(--ink);padding:4px 0;font-variant-numeric:tabular-nums}
+.amount .unit{font-size:.75rem;font-weight:500;color:var(--muted)}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.chips button{font:600 .82rem var(--font);color:var(--ink);background:#fff;border:0;border-radius:14px;padding:9px 0;cursor:pointer;transition:background .15s,color .15s}
+.chips button[aria-pressed="true"]{background:var(--pink);color:#fff}
+.chips button:focus-visible,.amount input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rows{display:flex;flex-direction:column;gap:6px;font-size:.85rem;padding:2px 4px 0}
+.rows div{display:flex;justify-content:space-between;gap:10px}
+.rows dt{color:var(--muted)} .rows dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+dl{margin:0}
+
+.win{border-radius:22px;padding:16px 18px;background:linear-gradient(100deg,var(--pink-soft),var(--blue-soft));display:flex;flex-direction:column;gap:2px}
+.win .eyebrow{color:#7A5C8E}
+.win .big{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.win .sub{font-size:.8rem;color:var(--blue);font-weight:500}
+
+.hist{background:var(--card);border-radius:28px;padding:16px 18px 12px;display:flex;flex-direction:column;gap:8px}
+.hist-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.hist svg{width:100%;height:auto;display:block}
+.hist .empty{font-size:.8rem;color:var(--muted);padding:8px 0}
+
+table{width:100%;border-collapse:collapse;font-size:.82rem;font-variant-numeric:tabular-nums}
+th{font-size:.6rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 4px 8px}
+td{padding:7px 4px;text-align:right;border-top:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td.g{color:var(--pink);font-weight:600}
+.tablecard{background:var(--card);border-radius:28px;padding:16px 14px 8px;overflow-x:auto}
+
+.note{font-size:.7rem;color:var(--muted);line-height:1.5;margin:0;padding:0 6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:360px){.gap{font-size:3.4rem}.rate strong{font-size:.9rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Brecha <span>VE</span></div>
+    <div class="fresh" id="fresh"><i class="dot" id="dot"></i><span id="freshTxt">Tasas del 13 oct</span></div>
+  </header>
+
+  <section class="hero" aria-label="Brecha cambiaria">
+    <div class="eyebrow">Brecha Binance vs BCV</div>
+    <div class="gap" id="gap">15,0<small>%</small></div>
+    <p>Cada dólar te rinde <b id="perUsd">Bs 131,70</b> más en Binance</p>
+  </section>
+
+  <section class="rates" aria-label="Tasas del día">
+    <div class="rate usd"><span class="eyebrow">Dólar BCV</span><strong id="rBCV">876,80</strong><em id="rFecha">Fecha valor 13/10</em></div>
+    <div class="rate"><span class="eyebrow">Euro BCV</span><strong id="rEUR">982,00</strong><em>Oficial</em></div>
+    <div class="rate p2p"><span class="eyebrow">Binance</span><strong id="rP2P">1.008,50</strong><em>USDT P2P</em></div>
+  </section>
+
+  <section class="calc" aria-label="Calculadora">
+    <div class="eyebrow">¿Cuánto vas a cambiar?</div>
+    <label class="amount" for="amt"><span>$</span><input id="amt" type="text" inputmode="decimal" autocomplete="off" value="10" aria-label="Monto en dólares o USDT"><i class="unit">USD / USDT</i></label>
+    <div class="chips" id="chips">
+      <button data-v="10">10</button><button data-v="20">20</button><button data-v="50">50</button><button data-v="100">100</button><button data-v="500">500</button>
+    </div>
+    <dl class="rows">
+      <div><dt>En Binance recibes</dt><dd id="oP2P">–</dd></div>
+      <div><dt>A tasa BCV recibes</dt><dd id="oBCV">–</dd></div>
+      <div><dt>Eso equivale a</dt><dd id="oEq">–</dd></div>
+    </dl>
+    <div class="win">
+      <span class="eyebrow">Ganas cambiando en Binance</span>
+      <span class="big" id="oWin">–</span>
+      <span class="sub" id="oWinUsd"></span>
+    </div>
+  </section>
+
+  <section class="hist" aria-label="Historial de la brecha">
+    <div class="hist-head"><span class="eyebrow">Brecha en los últimos días</span><span class="eyebrow" id="histRange"></span></div>
+    <div id="chart"><div class="empty">El historial se irá llenando con cada actualización.</div></div>
+  </section>
+
+  <section class="tablecard" aria-label="Tabla rápida">
+    <table>
+      <thead><tr><th>Monto</th><th>BCV</th><th>Binance</th><th>Ganas</th></tr></thead>
+      <tbody id="tbl"></tbody>
+    </table>
+  </section>
+
+  <p class="note">Tasa oficial del BCV y precio de USDT en Binance P2P (promedio entre compra y venta), vía DolarAPI y CriptoYa. Se actualiza sola cada 30 minutos. El precio P2P cambia minuto a minuto y según el método de pago, y no incluye comisiones. Es informativo, no asesoría financiera.</p>
+</div>
+
+<script>
+// Últimas tasas conocidas: se usan solo si no carga rates.json
+const FALLBACK = {"bcv":876.7976,"eur":982.00454402,"p2p":1008.5,"fechaBCV":"2026-10-13","actualizado":"2026-10-13T21:40:00-04:00","hist":[{"t":"2026-10-09T12:00:00-04:00","bcv":875.6505,"p2p":1007.66},{"t":"2026-10-13T21:40:00-04:00","bcv":876.7976,"p2p":1008.5}]};
+let R = { ...FALLBACK };
+
+const $ = id => document.getElementById(id);
+const nf = (n, d = 2) => Number(n).toLocaleString("es-VE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const parseAmt = s => {
+  s = String(s).trim().replace(/\s/g, "");
+  if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+  else s = s.replace(",", ".");
+  const n = parseFloat(s); return isFinite(n) && n > 0 ? n : 0;
+};
+
+function fresh() {
+  const t = new Date(R.actualizado); const mins = (Date.now() - t) / 60000;
+  let txt;
+  if (!isFinite(mins)) txt = "Tasas guardadas";
+  else if (mins < 60) txt = `Hace ${Math.max(1, Math.round(mins))} min`;
+  else if (mins < 24 * 60) txt = `Hace ${Math.round(mins / 60)} h`;
+  else txt = "Del " + t.toLocaleDateString("es-VE", { day: "numeric", month: "short" });
+  $("freshTxt").textContent = txt;
+  $("dot").classList.toggle("old", !(mins < 6 * 60));
+}
+
+function render() {
+  const { bcv, eur, p2p } = R; const a = parseAmt($("amt").value);
+  const gap = bcv ? (p2p / bcv - 1) * 100 : 0;
+  $("gap").innerHTML = nf(gap, 1) + "<small>%</small>";
+  $("perUsd").textContent = "Bs " + nf(p2p - bcv);
+  $("rBCV").textContent = nf(bcv); $("rEUR").textContent = nf(eur); $("rP2P").textContent = nf(p2p);
+  if (R.fechaBCV) { const [y, m, d] = R.fechaBCV.split("-"); $("rFecha").textContent = `Fecha valor ${d}/${m}`; }
+  const vP = a * p2p, vB = a * bcv, diff = vP - vB;
+  $("oP2P").textContent = "Bs " + nf(vP);
+  $("oBCV").textContent = "Bs " + nf(vB);
+  $("oEq").textContent = bcv ? `$${nf(vP / bcv)} · €${nf(vP / eur)} BCV` : "–";
+  $("oWin").textContent = (diff >= 0 ? "+" : "") + "Bs " + nf(diff);
+  $("oWinUsd").textContent = bcv ? `≈ $${nf(diff / bcv)} extra a tasa BCV` : "";
+  document.querySelectorAll("#chips button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === a)));
+  $("tbl").innerHTML = [10, 20, 50, 100, 200, 500, 1000].map(m =>
+    `<tr><td>$${m.toLocaleString("es-VE")}</td><td>${nf(m * bcv)}</td><td>${nf(m * p2p)}</td><td class="g">+${nf(m * (p2p - bcv))}</td></tr>`).join("");
+  fresh(); chart();
+}
+
+function chart() {
+  const h = (R.hist || []).filter(p => p && p.bcv > 0 && p.p2p > 0).slice(-30);
+  if (h.length < 2) { $("histRange").textContent = ""; return; }
+  const pts = h.map(p => ({ t: new Date(p.t), g: (p.p2p / p.bcv - 1) * 100 }));
+  const W = 320, H = 110, padL = 4, padR = 40, padT = 12, padB = 18;
+  let lo = Math.min(...pts.map(p => p.g)), hi = Math.max(...pts.map(p => p.g));
+  if (hi - lo < 1) { lo -= .5; hi += .5; }
+  const x = i => padL + i * (W - padL - padR) / (pts.length - 1);
+  const y = g => padT + (hi - g) * (H - padT - padB) / (hi - lo);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.g).toFixed(1)}`).join("");
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${H - padB}L${padL},${H - padB}Z`;
+  const last = pts[pts.length - 1];
+  const fmtD = d => d.toLocaleDateString("es-VE", { day: "numeric", month: "short" });
+  $("histRange").textContent = `${fmtD(pts[0].t)} – ${fmtD(last.t)}`;
+  $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brecha entre ${nf(lo,1)}% y ${nf(hi,1)}%">
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9679C" stop-opacity=".28"/><stop offset="1" stop-color="#5B8DE0" stop-opacity=".04"/></linearGradient></defs>
+    <line x1="${padL}" x2="${W - padR}" y1="${y(hi)}" y2="${y(hi)}" stroke="#EEDFF0" stroke-dasharray="3 4"/>
+    <line x1="${padL}" x2="${W - padR}" y1="${y(lo)}" y2="${y(lo)}" stroke="#EEDFF0" stroke-dasharray="3 4"/>
+    <text x="${W - padR + 6}" y="${y(hi) + 4}" font-size="10" fill="#8A84A3" font-family="Poppins,sans-serif">${nf(hi,1)}%</text>
+    <text x="${W - padR + 6}" y="${y(lo) + 4}" font-size="10" fill="#8A84A3" font-family="Poppins,sans-serif">${nf(lo,1)}%</text>
+    <path d="${area}" fill="url(#ga)"/>
+    <path d="${line}" fill="none" stroke="#E9679C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(pts.length - 1)}" cy="${y(last.g)}" r="4.5" fill="#fff" stroke="#E9679C" stroke-width="2.4"/>
+  </svg>`;
+}
+
+// eventos
+$("amt").addEventListener("input", render);
+$("chips").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $("amt").value = b.dataset.v; save(); render(); });
+$("amt").addEventListener("change", save);
+function save() { try { localStorage.setItem("brecha-monto", $("amt").value); } catch (e) {} }
+try { const m = localStorage.getItem("brecha-monto"); if (m) $("amt").value = m; } catch (e) {}
+setInterval(fresh, 60000);
+render();
+
+// tasas en vivo: rates.json se actualiza solo cada 30 minutos
+async function cargar() {
+  try {
+    const r = await fetch("rates.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && +d.bcv > 0 && +d.p2p > 0) {
+      R = { bcv: +d.bcv, eur: +d.eur || R.eur, p2p: +d.p2p, fechaBCV: d.fechaBCV || R.fechaBCV, actualizado: d.actualizado || R.actualizado, hist: Array.isArray(d.hist) ? d.hist : R.hist };
+      try { localStorage.setItem("brecha-tasas", JSON.stringify(R)); } catch (e) {}
+      render();
+    }
+  } catch (e) {}
+}
+try { const s = JSON.parse(localStorage.getItem("brecha-tasas") || "null"); if (s && s.bcv > 0 && new Date(s.actualizado) > new Date(R.actualizado)) { R = s; render(); } } catch (e) {}
+cargar();
+setInterval(cargar, 10 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) cargar(); });
+</script>
+</body>
+</html>

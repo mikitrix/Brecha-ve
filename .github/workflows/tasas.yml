@@ -1,0 +1,36 @@
+name: Actualizar tasas
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # cada 30 minutos
+  workflow_dispatch:          # botón "Run workflow" para actualizar a mano
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tasas
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Buscar tasas
+        run: node scripts/actualizar.mjs
+      - name: Guardar cambios
+        run: |
+          if git diff --quiet rates.json; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git config user.name "brecha-ve-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rates.json
+          git commit -m "Tasas $(TZ=America/Caracas date '+%d/%m %H:%M')"
+          git push
