@@ -65,6 +65,19 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .rows div{display:flex;justify-content:space-between;gap:10px}
 .rows dt{color:var(--muted)} .rows dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 dl{margin:0}
+.rows dt{display:flex;align-items:center;gap:8px;min-width:0}
+.sw{width:8px;height:8px;border-radius:50%;flex:none}
+.sw.p{background:var(--pink)} .sw.b{background:var(--blue)} .sw.e{background:#A98BD6} .sw.m{background:var(--ink)}
+.mine{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.55);border:1.5px dashed #E3C9DF;border-radius:16px;padding:8px 12px}
+.mine:focus-within{border-style:solid;border-color:var(--pink-soft);background:#fff}
+.mine-lbl{display:flex;flex-direction:column;line-height:1.25;flex:none}
+.mine-lbl b{font-size:.82rem;font-weight:600}
+.mine-lbl i{font-style:normal;font-size:.64rem;color:var(--muted)}
+.mine input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:600 1.05rem var(--font);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.mine input::placeholder{color:#C3BCD6;font-weight:500}
+.mine-x{border:0;background:transparent;color:var(--muted);font-size:.85rem;cursor:pointer;padding:4px;border-radius:8px}
+.mine-x:focus-visible{outline:2px solid var(--blue)}
+.win .sub.mine-sub{color:var(--ink);font-weight:600}
 
 .win{border-radius:22px;padding:16px 18px;background:linear-gradient(100deg,var(--pink-soft),var(--blue-soft));display:flex;flex-direction:column;gap:2px}
 .win .eyebrow{color:#7A5C8E}
@@ -113,15 +126,23 @@ td.g{color:var(--pink);font-weight:600}
     <div class="chips" id="chips">
       <button data-v="10">10</button><button data-v="20">20</button><button data-v="50">50</button><button data-v="100">100</button><button data-v="500">500</button>
     </div>
+    <label class="mine" for="mine">
+      <span class="mine-lbl"><b>Tu tasa</b><i>Bs por cada $ · opcional</i></span>
+      <input id="mine" type="text" inputmode="decimal" autocomplete="off" placeholder="Ej. 1.000,00" aria-label="Tu tasa personalizada en bolívares por dólar">
+      <button type="button" id="mineClear" class="mine-x" aria-label="Borrar tu tasa" hidden>✕</button>
+    </label>
+    <div class="eyebrow" id="rowsTitle">Por $10 recibes</div>
     <dl class="rows">
-      <div><dt>En Binance recibes</dt><dd id="oP2P">–</dd></div>
-      <div><dt>A tasa BCV recibes</dt><dd id="oBCV">–</dd></div>
-      <div><dt>Eso equivale a</dt><dd id="oEq">–</dd></div>
+      <div><dt><i class="sw p"></i>Binance P2P</dt><dd id="oP2P">–</dd></div>
+      <div><dt><i class="sw b"></i>Dólar BCV</dt><dd id="oBCV">–</dd></div>
+      <div><dt><i class="sw e"></i><span id="eurLbl">Euro BCV (si son €10)</span></dt><dd id="oEUR">–</dd></div>
+      <div id="rowMine" hidden><dt><i class="sw m"></i>Tu tasa</dt><dd id="oMine">–</dd></div>
     </dl>
     <div class="win">
       <span class="eyebrow">Ganas cambiando en Binance</span>
       <span class="big" id="oWin">–</span>
       <span class="sub" id="oWinUsd"></span>
+      <span class="sub mine-sub" id="oWinMine" hidden></span>
     </div>
   </section>
 
@@ -150,6 +171,7 @@ const nf = (n, d = 2) => Number(n).toLocaleString("es-VE", { minimumFractionDigi
 const parseAmt = s => {
   s = String(s).trim().replace(/\s/g, "");
   if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");   // 1.050 = mil cincuenta
   else s = s.replace(",", ".");
   const n = parseFloat(s); return isFinite(n) && n > 0 ? n : 0;
 };
@@ -172,12 +194,22 @@ function render() {
   $("perUsd").textContent = "Bs " + nf(p2p - bcv);
   $("rBCV").textContent = nf(bcv); $("rEUR").textContent = nf(eur); $("rP2P").textContent = nf(p2p);
   if (R.fechaBCV) { const [y, m, d] = R.fechaBCV.split("-"); $("rFecha").textContent = `Fecha valor ${d}/${m}`; }
-  const vP = a * p2p, vB = a * bcv, diff = vP - vB;
+  const vP = a * p2p, vB = a * bcv, vE = a * eur, diff = vP - vB;
+  const aTxt = nf(a, a % 1 ? 2 : 0);
+  $("rowsTitle").textContent = `Por $${aTxt} recibes`;
+  $("eurLbl").textContent = `Euro BCV (si son €${aTxt})`;
   $("oP2P").textContent = "Bs " + nf(vP);
   $("oBCV").textContent = "Bs " + nf(vB);
-  $("oEq").textContent = bcv ? `$${nf(vP / bcv)} · €${nf(vP / eur)} BCV` : "–";
+  $("oEUR").textContent = "Bs " + nf(vE);
   $("oWin").textContent = (diff >= 0 ? "+" : "") + "Bs " + nf(diff);
   $("oWinUsd").textContent = bcv ? `≈ $${nf(diff / bcv)} extra a tasa BCV` : "";
+  const mine = parseAmt($("mine").value);
+  $("rowMine").hidden = !mine; $("oWinMine").hidden = !mine; $("mineClear").hidden = !$("mine").value;
+  if (mine) {
+    const vM = a * mine, dM = vM - vB;
+    $("oMine").textContent = "Bs " + nf(vM);
+    $("oWinMine").textContent = `Con tu tasa: ${dM >= 0 ? "+" : ""}Bs ${nf(dM)} vs BCV`;
+  }
   document.querySelectorAll("#chips button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === a)));
   $("tbl").innerHTML = [10, 20, 50, 100, 200, 500, 1000].map(m =>
     `<tr><td>$${m.toLocaleString("es-VE")}</td><td>${nf(m * bcv)}</td><td>${nf(m * p2p)}</td><td class="g">+${nf(m * (p2p - bcv))}</td></tr>`).join("");
@@ -216,6 +248,11 @@ $("chips").addEventListener("click", e => { const b = e.target.closest("button")
 $("amt").addEventListener("change", save);
 function save() { try { localStorage.setItem("brecha-monto", $("amt").value); } catch (e) {} }
 try { const m = localStorage.getItem("brecha-monto"); if (m) $("amt").value = m; } catch (e) {}
+// tu tasa personalizada: se guarda en este teléfono
+const saveMine = () => { try { localStorage.setItem("brecha-mi-tasa", $("mine").value); } catch (e) {} };
+try { const t = localStorage.getItem("brecha-mi-tasa"); if (t) $("mine").value = t; } catch (e) {}
+$("mine").addEventListener("input", () => { saveMine(); render(); });
+$("mineClear").addEventListener("click", () => { $("mine").value = ""; saveMine(); render(); $("mine").focus(); });
 setInterval(fresh, 60000);
 render();
 
