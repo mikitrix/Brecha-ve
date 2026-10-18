@@ -57,6 +57,11 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .amount span{font-size:1.6rem;font-weight:600;color:var(--blue)}
 .amount input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:600 1.9rem/1.3 var(--font);color:var(--ink);padding:4px 0;font-variant-numeric:tabular-nums}
 .amount .unit{font-size:.75rem;font-weight:500;color:var(--muted)}
+.calc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:flex;background:rgba(255,255,255,.6);border-radius:999px;padding:3px;gap:2px}
+.seg button{font:600 .74rem var(--font);color:var(--muted);background:transparent;border:0;border-radius:999px;padding:6px 11px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
 .chips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .chips button{font:600 .82rem var(--font);color:var(--ink);background:#fff;border:0;border-radius:14px;padding:9px 0;cursor:pointer;transition:background .15s,color .15s}
 .chips button[aria-pressed="true"]{background:var(--pink);color:#fff}
@@ -121,11 +126,15 @@ td.g{color:var(--pink);font-weight:600}
   </section>
 
   <section class="calc" aria-label="Calculadora">
-    <div class="eyebrow">¿Cuánto vas a cambiar?</div>
-    <label class="amount" for="amt"><span>$</span><input id="amt" type="text" inputmode="decimal" autocomplete="off" value="10" aria-label="Monto en dólares o USDT"><i class="unit">USD / USDT</i></label>
-    <div class="chips" id="chips">
-      <button data-v="10">10</button><button data-v="20">20</button><button data-v="50">50</button><button data-v="100">100</button><button data-v="500">500</button>
+    <div class="calc-head">
+      <div class="eyebrow" id="calcQ">¿Cuánto vas a cambiar?</div>
+      <div class="seg" role="group" aria-label="Sentido de la cuenta">
+        <button type="button" id="modeUsd" aria-pressed="true">$ → Bs</button>
+        <button type="button" id="modeBs" aria-pressed="false">Bs → $</button>
+      </div>
     </div>
+    <label class="amount" for="amt"><span id="amtSym">$</span><input id="amt" type="text" inputmode="decimal" autocomplete="off" value="10" aria-label="Monto"><i class="unit" id="amtUnit">USD / USDT</i></label>
+    <div class="chips" id="chips"></div>
     <label class="mine" for="mine">
       <span class="mine-lbl"><b>Tu tasa</b><i>Bs por cada $ · opcional</i></span>
       <input id="mine" type="text" inputmode="decimal" autocomplete="off" placeholder="Ej. 1.000,00" aria-label="Tu tasa personalizada en bolívares por dólar">
@@ -139,7 +148,7 @@ td.g{color:var(--pink);font-weight:600}
       <div id="rowMine" hidden><dt><i class="sw m"></i>Tu tasa</dt><dd id="oMine">–</dd></div>
     </dl>
     <div class="win">
-      <span class="eyebrow">Ganas cambiando en Binance</span>
+      <span class="eyebrow" id="winLbl">Ganas cambiando en Binance</span>
       <span class="big" id="oWin">–</span>
       <span class="sub" id="oWinUsd"></span>
       <span class="sub mine-sub" id="oWinMine" hidden></span>
@@ -194,21 +203,41 @@ function render() {
   $("perUsd").textContent = "Bs " + nf(p2p - bcv);
   $("rBCV").textContent = nf(bcv); $("rEUR").textContent = nf(eur); $("rP2P").textContent = nf(p2p);
   if (R.fechaBCV) { const [y, m, d] = R.fechaBCV.split("-"); $("rFecha").textContent = `Fecha valor ${d}/${m}`; }
-  const vP = a * p2p, vB = a * bcv, vE = a * eur, diff = vP - vB;
   const aTxt = nf(a, a % 1 ? 2 : 0);
-  $("rowsTitle").textContent = `Por $${aTxt} recibes`;
-  $("eurLbl").textContent = `Euro BCV (si son €${aTxt})`;
-  $("oP2P").textContent = "Bs " + nf(vP);
-  $("oBCV").textContent = "Bs " + nf(vB);
-  $("oEUR").textContent = "Bs " + nf(vE);
-  $("oWin").textContent = (diff >= 0 ? "+" : "") + "Bs " + nf(diff);
-  $("oWinUsd").textContent = bcv ? `≈ $${nf(diff / bcv)} extra a tasa BCV` : "";
   const mine = parseAmt($("mine").value);
   $("rowMine").hidden = !mine; $("oWinMine").hidden = !mine; $("mineClear").hidden = !$("mine").value;
-  if (mine) {
-    const vM = a * mine, dM = vM - vB;
-    $("oMine").textContent = "Bs " + nf(vM);
-    $("oWinMine").textContent = `Con tu tasa: ${dM >= 0 ? "+" : ""}Bs ${nf(dM)} vs BCV`;
+  if (mode === "usd") {
+    // $ → Bs: cuántos bolívares recibes por tus dólares
+    const vP = a * p2p, vB = a * bcv, vE = a * eur, diff = vP - vB;
+    $("rowsTitle").textContent = `Por $${aTxt} recibes`;
+    $("eurLbl").textContent = `Euro BCV (si son €${aTxt})`;
+    $("oP2P").textContent = "Bs " + nf(vP);
+    $("oBCV").textContent = "Bs " + nf(vB);
+    $("oEUR").textContent = "Bs " + nf(vE);
+    $("winLbl").textContent = "Ganas cambiando en Binance";
+    $("oWin").textContent = (diff >= 0 ? "+" : "") + "Bs " + nf(diff);
+    $("oWinUsd").textContent = bcv ? `≈ $${nf(diff / bcv)} extra a tasa BCV` : "";
+    if (mine) {
+      const vM = a * mine, dM = vM - vB;
+      $("oMine").textContent = "Bs " + nf(vM);
+      $("oWinMine").textContent = `Con tu tasa: ${dM >= 0 ? "+" : ""}Bs ${nf(dM)} vs BCV`;
+    }
+  } else {
+    // Bs → $: a cuántos dólares equivalen tus bolívares
+    const uP = p2p ? a / p2p : 0, uB = bcv ? a / bcv : 0, uE = eur ? a / eur : 0, save$ = uB - uP;
+    $("rowsTitle").textContent = `Bs ${aTxt} equivalen a`;
+    $("eurLbl").textContent = "Euro BCV";
+    $("oP2P").textContent = nf(uP) + " USDT";
+    $("oBCV").textContent = "$" + nf(uB);
+    $("oEUR").textContent = "€" + nf(uE);
+    $("winLbl").textContent = `Para reunir Bs ${aTxt} te ahorras`;
+    $("oWin").textContent = "$" + nf(save$) + " en Binance";
+    $("oWinUsd").textContent = `Cambias $${nf(uP)} en Binance en vez de $${nf(uB)} a tasa BCV`;
+    if (mine) {
+      const uM = a / mine;
+      $("oMine").textContent = "$" + nf(uM);
+      $("oWinMine").textContent = `Con tu tasa necesitas $${nf(uM)}`;
+    }
   }
   document.querySelectorAll("#chips button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === a)));
   $("tbl").innerHTML = [10, 20, 50, 100, 200, 500, 1000].map(m =>
@@ -244,17 +273,38 @@ function chart() {
 
 // eventos
 $("amt").addEventListener("input", render);
-$("chips").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $("amt").value = b.dataset.v; save(); render(); });
+$("chips").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $("amt").value = b.dataset.label; save(); render(); });
 $("amt").addEventListener("change", save);
-function save() { try { localStorage.setItem("brecha-monto", $("amt").value); } catch (e) {} }
-try { const m = localStorage.getItem("brecha-monto"); if (m) $("amt").value = m; } catch (e) {}
+
+// sentido de la cuenta: "usd" ($ → Bs) o "bs" (Bs → $). Cada uno recuerda su propio monto.
+let mode = "usd";
+const MODES = {
+  usd: { sym: "$", unit: "USD / USDT", q: "¿Cuánto vas a cambiar?", key: "brecha-monto", def: "10", chips: [10, 20, 50, 100, 500] },
+  bs:  { sym: "Bs", unit: "Bolívares", q: "¿Cuántos bolívares?", key: "brecha-monto-bs", def: "10.000", chips: [1000, 5000, 10000, 50000, 100000] },
+};
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+function save() { lsSet(MODES[mode].key, $("amt").value); }
+function setMode(m, keepFocus) {
+  mode = m; const M = MODES[m];
+  lsSet("brecha-modo", m);
+  $("modeUsd").setAttribute("aria-pressed", String(m === "usd"));
+  $("modeBs").setAttribute("aria-pressed", String(m === "bs"));
+  $("amtSym").textContent = M.sym; $("amtUnit").textContent = M.unit; $("calcQ").textContent = M.q;
+  $("amt").setAttribute("aria-label", m === "usd" ? "Monto en dólares o USDT" : "Monto en bolívares");
+  $("amt").value = lsGet(M.key) || M.def;
+  $("chips").innerHTML = M.chips.map(v => { const l = v.toLocaleString("es-VE"); return `<button type="button" data-v="${v}" data-label="${l}">${m === "bs" && v >= 1000 ? (v / 1000).toLocaleString("es-VE") + "k" : l}</button>`; }).join("");
+  render();
+}
+$("modeUsd").addEventListener("click", () => setMode("usd"));
+$("modeBs").addEventListener("click", () => setMode("bs"));
 // tu tasa personalizada: se guarda en este teléfono
 const saveMine = () => { try { localStorage.setItem("brecha-mi-tasa", $("mine").value); } catch (e) {} };
 try { const t = localStorage.getItem("brecha-mi-tasa"); if (t) $("mine").value = t; } catch (e) {}
 $("mine").addEventListener("input", () => { saveMine(); render(); });
 $("mineClear").addEventListener("click", () => { $("mine").value = ""; saveMine(); render(); $("mine").focus(); });
 setInterval(fresh, 60000);
-render();
+setMode(lsGet("brecha-modo") === "bs" ? "bs" : "usd");
 
 // tasas en vivo: rates.json se actualiza solo cada 30 minutos
 async function cargar() {
