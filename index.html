@@ -25,6 +25,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{background:var(--bg2)}
 body{font-family:var(--font);color:var(--ink);background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%) fixed;background-color:var(--bg2);min-height:100vh;-webkit-tap-highlight-color:transparent}
 body{margin:0}
@@ -112,6 +113,8 @@ dl{margin:0}
 .route-out .eyebrow{color:#5C6E9E}
 .route-out .big{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
 .route-out .sub{font-size:.8rem;font-weight:500;color:var(--ink)}
+.route-out.need{background:#fff;border:2px solid var(--pink-soft)}
+.route-out.need .big{color:var(--pink)}
 .route-sell{display:flex;flex-direction:column;gap:2px;padding:0 4px;font-size:.82rem;color:var(--muted)}
 .route-sell b{font-size:1.05rem;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .verdict{font-weight:600}
@@ -184,11 +187,18 @@ td.g{color:var(--pink);font-weight:600}
 
   <section class="route" aria-label="Banco a Binance">
     <div class="route-head">
-      <div class="eyebrow">Banco → Binance</div>
+      <div class="calc-head">
+        <div class="eyebrow">Banco → Binance</div>
+        <div class="seg" role="group" aria-label="Qué quieres calcular">
+          <button type="button" id="rtModeBs" aria-pressed="true">Tengo Bs</button>
+          <button type="button" id="rtModeUsd" aria-pressed="false">Quiero pasar $</button>
+        </div>
+      </div>
       <p>Compras dólares en tu banco y los pasas a Binance con la tarjeta. Pon tus datos de hoy.</p>
     </div>
     <div class="route-in">
-      <label class="fld wide" for="rtBs"><span>Tus bolívares</span><b>Bs</b><input id="rtBs" type="text" inputmode="decimal" autocomplete="off" placeholder="100.000"></label>
+      <label class="fld wide" for="rtBs" id="fldBs"><span>Tus bolívares</span><b>Bs</b><input id="rtBs" type="text" inputmode="decimal" autocomplete="off" placeholder="100.000"></label>
+      <label class="fld wide" for="rtPasar" id="fldPasar" hidden><span>Dólares que quieres pasar con la tarjeta</span><b>$</b><input id="rtPasar" type="text" inputmode="decimal" autocomplete="off" placeholder="200"></label>
       <label class="fld" for="rtTasa"><span>Tasa del banco hoy</span><b>Bs/$</b><input id="rtTasa" type="text" inputmode="decimal" autocomplete="off"></label>
       <label class="fld" for="rtBanco"><span>Comisión tarjeta</span><b>%</b><input id="rtBanco" type="text" inputmode="decimal" autocomplete="off" placeholder="2,5"></label>
       <label class="fld" for="rtBin"><span>Comisión Binance</span><b>%</b><input id="rtBin" type="text" inputmode="decimal" autocomplete="off" placeholder="4,1"></label>
@@ -199,6 +209,11 @@ td.g{color:var(--pink);font-weight:600}
       <li><span id="rt2l">Comisión de la tarjeta</span><b class="minus" id="rt2">–</b></li>
       <li><span id="rt3l">Comisión de Binance</span><b class="minus" id="rt3">–</b></li>
     </ol>
+    <div class="route-out need" id="rtNeedBox" hidden>
+      <span class="eyebrow" id="rtNeedLbl">Necesitas</span>
+      <span class="big" id="rtNeed">–</span>
+      <span class="sub" id="rtNeedSub">–</span>
+    </div>
     <div class="route-out">
       <span class="eyebrow">Te llegan a Binance</span>
       <span class="big" id="rtUsdt">–</span>
@@ -304,14 +319,25 @@ function render() {
 // Banco → Binance: Bs → $ en el banco → comisión de la tarjeta → comisión de Binance → USDT
 const pctTxt = v => (Math.round(v * 100) / 100).toLocaleString("es-VE", { maximumFractionDigits: 2 });
 function ruta() {
-  const bs = parseAmt($("rtBs").value) || 100000;
   const tasa = parseAmt($("rtTasa").value) || R.bcv;
   const pb = ($("rtBanco").value.trim() ? parseAmt($("rtBanco").value) : 2.5) / 100;
   const pf = ($("rtBin").value.trim() ? parseAmt($("rtBin").value) : 4.1) / 100;
   $("rtTasa").placeholder = nf(R.bcv);
   if (!tasa) return;
-  const usd = bs / tasa;                 // dólares que compras en el banco
-  const cargo = usd / (1 + pb);          // lo que puedes pasar con la tarjeta (el banco suma su %)
+  let bs, usd, cargo;
+  if (rtMode === "usd") {
+    // al revés: cuánto necesitas para pasar X dólares con la tarjeta
+    cargo = parseAmt($("rtPasar").value) || 200;
+    usd = cargo * (1 + pb);              // el banco suma su % a lo que pasas
+    bs = usd * tasa;
+    $("rtNeedLbl").textContent = `Para pasar $${nf(cargo, cargo % 1 ? 2 : 0)} necesitas`;
+    $("rtNeed").textContent = "Bs " + nf(bs);
+    $("rtNeedSub").textContent = `Compras $${nf(usd)} en el banco a Bs ${nf(tasa)}`;
+  } else {
+    bs = parseAmt($("rtBs").value) || 100000;
+    usd = bs / tasa;                     // dólares que compras en el banco
+    cargo = usd / (1 + pb);              // lo que puedes pasar con la tarjeta (el banco suma su %)
+  }
   const feeBanco = usd - cargo;
   const feeBin = cargo * pf;             // Binance descuenta su % de lo que pasas
   const usdt = cargo - feeBin;
@@ -391,11 +417,23 @@ $("mine").addEventListener("input", () => { saveMine(); render(); });
 $("mineClear").addEventListener("click", () => { $("mine").value = ""; saveMine(); render(); $("mine").focus(); });
 setInterval(fresh, 60000);
 // los datos de Banco → Binance se guardan en este teléfono
-["rtBs", "rtTasa", "rtBanco", "rtBin"].forEach(id => {
+let rtMode = "bs";
+function setRtMode(m) {
+  rtMode = m; lsSet("brecha-rtModo", m);
+  $("rtModeBs").setAttribute("aria-pressed", String(m === "bs"));
+  $("rtModeUsd").setAttribute("aria-pressed", String(m === "usd"));
+  $("fldBs").hidden = m !== "bs"; $("fldPasar").hidden = m !== "usd"; $("rtNeedBox").hidden = m !== "usd";
+  ruta();
+}
+$("rtModeBs").addEventListener("click", () => setRtMode("bs"));
+$("rtModeUsd").addEventListener("click", () => setRtMode("usd"));
+["rtBs", "rtPasar", "rtTasa", "rtBanco", "rtBin"].forEach(id => {
   const v = lsGet("brecha-" + id); if (v) $(id).value = v;
   $(id).addEventListener("input", () => { lsSet("brecha-" + id, $(id).value); ruta(); });
 });
+rtMode = lsGet("brecha-rtModo") === "usd" ? "usd" : "bs";
 setMode(lsGet("brecha-modo") === "bs" ? "bs" : "usd");
+setRtMode(rtMode);
 
 // tasas en vivo: rates.json se actualiza solo cada 30 minutos
 async function cargar() {
