@@ -191,18 +191,20 @@ td.g{color:var(--pink);font-weight:600}
         <div class="eyebrow">Banco → Binance</div>
         <div class="seg" role="group" aria-label="Qué quieres calcular">
           <button type="button" id="rtModeBs" aria-pressed="true">Tengo Bs</button>
-          <button type="button" id="rtModeUsd" aria-pressed="false">Quiero pasar $</button>
+          <button type="button" id="rtModeUsd" aria-pressed="false">Pasar $</button>
+          <button type="button" id="rtModeGet" aria-pressed="false">Recibir USDT</button>
         </div>
       </div>
       <p>Compras dólares en tu banco y los pasas a Binance con la tarjeta. Pon tus datos de hoy.</p>
     </div>
     <div class="route-in">
       <label class="fld wide" for="rtBs" id="fldBs"><span>Tus bolívares</span><b>Bs</b><input id="rtBs" type="text" inputmode="decimal" autocomplete="off" placeholder="100.000"></label>
+      <label class="fld wide" for="rtRecibir" id="fldRecibir" hidden><span>USDT que quieres que te lleguen</span><b>USDT</b><input id="rtRecibir" type="text" inputmode="decimal" autocomplete="off" placeholder="200"></label>
       <label class="fld wide" for="rtPasar" id="fldPasar" hidden><span>Dólares que quieres pasar con la tarjeta</span><b>$</b><input id="rtPasar" type="text" inputmode="decimal" autocomplete="off" placeholder="200"></label>
       <label class="fld" for="rtTasa"><span>Tasa del banco hoy</span><b>Bs/$</b><input id="rtTasa" type="text" inputmode="decimal" autocomplete="off"></label>
       <label class="fld" for="rtBanco"><span>Comisión tarjeta</span><b>%</b><input id="rtBanco" type="text" inputmode="decimal" autocomplete="off" placeholder="2,5"></label>
-      <label class="fld" for="rtBin"><span>Comisión Binance</span><b>%</b><input id="rtBin" type="text" inputmode="decimal" autocomplete="off" placeholder="4,1"></label>
-      <div class="fld hint"><span>Binance cobra entre</span><em>3,6% y 4,1%</em></div>
+      <label class="fld" for="rtBin"><span>Comisión Binance</span><b>%</b><input id="rtBin" type="text" inputmode="decimal" autocomplete="off" placeholder="4,3"></label>
+      <div class="fld hint"><span>Binance suele cobrar</span><em>3,6% a 4,3%</em></div>
     </div>
     <ol class="steps">
       <li><span>Compras en el banco</span><b id="rt1">–</b></li>
@@ -321,11 +323,20 @@ const pctTxt = v => (Math.round(v * 100) / 100).toLocaleString("es-VE", { maximu
 function ruta() {
   const tasa = parseAmt($("rtTasa").value) || R.bcv;
   const pb = ($("rtBanco").value.trim() ? parseAmt($("rtBanco").value) : 2.5) / 100;
-  const pf = ($("rtBin").value.trim() ? parseAmt($("rtBin").value) : 4.1) / 100;
+  const pf = ($("rtBin").value.trim() ? parseAmt($("rtBin").value) : 4.3) / 100;
   $("rtTasa").placeholder = nf(R.bcv);
   if (!tasa) return;
   let bs, usd, cargo;
-  if (rtMode === "usd") {
+  if (rtMode === "get") {
+    // cuánto necesitas para que te lleguen X USDT
+    const quiero = parseAmt($("rtRecibir").value) || 200;
+    cargo = quiero / (1 - pf);           // Binance cobra su % sobre lo que pasas
+    usd = cargo * (1 + pb);
+    bs = usd * tasa;
+    $("rtNeedLbl").textContent = `Para recibir ${nf(quiero, quiero % 1 ? 2 : 0)} USDT necesitas`;
+    $("rtNeed").textContent = "Bs " + nf(bs);
+    $("rtNeedSub").textContent = `Pasas $${nf(cargo)} con la tarjeta y compras $${nf(usd)} en el banco a Bs ${nf(tasa)}`;
+  } else if (rtMode === "usd") {
     // al revés: cuánto necesitas para pasar X dólares con la tarjeta
     cargo = parseAmt($("rtPasar").value) || 200;
     usd = cargo * (1 + pb);              // el banco suma su % a lo que pasas
@@ -422,16 +433,19 @@ function setRtMode(m) {
   rtMode = m; lsSet("brecha-rtModo", m);
   $("rtModeBs").setAttribute("aria-pressed", String(m === "bs"));
   $("rtModeUsd").setAttribute("aria-pressed", String(m === "usd"));
-  $("fldBs").hidden = m !== "bs"; $("fldPasar").hidden = m !== "usd"; $("rtNeedBox").hidden = m !== "usd";
+  $("rtModeGet").setAttribute("aria-pressed", String(m === "get"));
+  $("fldBs").hidden = m !== "bs"; $("fldPasar").hidden = m !== "usd"; $("fldRecibir").hidden = m !== "get";
+  $("rtNeedBox").hidden = m === "bs";
   ruta();
 }
 $("rtModeBs").addEventListener("click", () => setRtMode("bs"));
 $("rtModeUsd").addEventListener("click", () => setRtMode("usd"));
-["rtBs", "rtPasar", "rtTasa", "rtBanco", "rtBin"].forEach(id => {
+$("rtModeGet").addEventListener("click", () => setRtMode("get"));
+["rtBs", "rtPasar", "rtRecibir", "rtTasa", "rtBanco", "rtBin"].forEach(id => {
   const v = lsGet("brecha-" + id); if (v) $(id).value = v;
   $(id).addEventListener("input", () => { lsSet("brecha-" + id, $(id).value); ruta(); });
 });
-rtMode = lsGet("brecha-rtModo") === "usd" ? "usd" : "bs";
+rtMode = ["usd", "get"].includes(lsGet("brecha-rtModo")) ? lsGet("brecha-rtModo") : "bs";
 setMode(lsGet("brecha-modo") === "bs" ? "bs" : "usd");
 setRtMode(rtMode);
 
