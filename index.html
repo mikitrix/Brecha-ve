@@ -89,6 +89,33 @@ dl{margin:0}
 .win .big{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
 .win .sub{font-size:.8rem;color:var(--blue);font-weight:500}
 
+.route{background:var(--card);border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.route-head p{margin:4px 0 0;font-size:.8rem;color:var(--muted);line-height:1.45}
+.route-in{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fld{background:#fff;border-radius:16px;padding:8px 12px;display:grid;grid-template-columns:1fr auto;grid-template-areas:"l l" "i u";align-items:baseline;gap:0 6px;border:2px solid transparent;min-width:0}
+.fld:focus-within{border-color:var(--pink-soft)}
+.fld.wide{grid-column:1/-1}
+.fld span{grid-area:l;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fld b{grid-area:u;font-size:.72rem;font-weight:500;color:var(--muted)}
+.fld input{grid-area:i;min-width:0;width:100%;border:0;outline:0;background:transparent;font:600 1.1rem/1.4 var(--font);color:var(--ink);padding:0;font-variant-numeric:tabular-nums}
+.fld.wide input{font-size:1.4rem}
+.fld input::placeholder{color:#C3BCD6}
+.fld.hint{background:transparent;border:1.5px dashed #E3C9DF;grid-template-areas:"l" "i";grid-template-columns:1fr}
+.fld.hint em{grid-area:i;font-style:normal;font-size:.9rem;font-weight:600;color:var(--pink)}
+.steps{list-style:none;margin:0;padding:0 4px;display:flex;flex-direction:column;gap:8px;counter-reset:s;font-size:.85rem}
+.steps li{display:flex;align-items:center;gap:10px;counter-increment:s}
+.steps li::before{content:counter(s);flex:none;width:20px;height:20px;border-radius:50%;background:var(--blue-soft);color:var(--blue);font-size:.68rem;font-weight:700;display:grid;place-items:center}
+.steps li span{flex:1;color:var(--muted);min-width:0}
+.steps li b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.steps li b.minus{color:var(--pink)}
+.route-out{border-radius:22px;padding:16px 18px;background:linear-gradient(100deg,var(--blue-soft),var(--pink-soft));display:flex;flex-direction:column;gap:2px}
+.route-out .eyebrow{color:#5C6E9E}
+.route-out .big{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.route-out .sub{font-size:.8rem;font-weight:500;color:var(--ink)}
+.route-sell{display:flex;flex-direction:column;gap:2px;padding:0 4px;font-size:.82rem;color:var(--muted)}
+.route-sell b{font-size:1.05rem;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.verdict{font-weight:600}
+.verdict.up{color:#2F9E6E} .verdict.down{color:#D2553F}
 .hist{background:var(--card);border-radius:28px;padding:16px 18px 12px;display:flex;flex-direction:column;gap:8px}
 .hist-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .hist svg{width:100%;height:auto;display:block}
@@ -152,6 +179,35 @@ td.g{color:var(--pink);font-weight:600}
       <span class="big" id="oWin">–</span>
       <span class="sub" id="oWinUsd"></span>
       <span class="sub mine-sub" id="oWinMine" hidden></span>
+    </div>
+  </section>
+
+  <section class="route" aria-label="Banco a Binance">
+    <div class="route-head">
+      <div class="eyebrow">Banco → Binance</div>
+      <p>Compras dólares en tu banco y los pasas a Binance con la tarjeta. Pon tus datos de hoy.</p>
+    </div>
+    <div class="route-in">
+      <label class="fld wide" for="rtBs"><span>Tus bolívares</span><b>Bs</b><input id="rtBs" type="text" inputmode="decimal" autocomplete="off" placeholder="100.000"></label>
+      <label class="fld" for="rtTasa"><span>Tasa del banco hoy</span><b>Bs/$</b><input id="rtTasa" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label class="fld" for="rtBanco"><span>Comisión tarjeta</span><b>%</b><input id="rtBanco" type="text" inputmode="decimal" autocomplete="off" placeholder="2,5"></label>
+      <label class="fld" for="rtBin"><span>Comisión Binance</span><b>%</b><input id="rtBin" type="text" inputmode="decimal" autocomplete="off" placeholder="4,1"></label>
+      <div class="fld hint"><span>Binance cobra entre</span><em>3,6% y 4,1%</em></div>
+    </div>
+    <ol class="steps">
+      <li><span>Compras en el banco</span><b id="rt1">–</b></li>
+      <li><span id="rt2l">Comisión de la tarjeta</span><b class="minus" id="rt2">–</b></li>
+      <li><span id="rt3l">Comisión de Binance</span><b class="minus" id="rt3">–</b></li>
+    </ol>
+    <div class="route-out">
+      <span class="eyebrow">Te llegan a Binance</span>
+      <span class="big" id="rtUsdt">–</span>
+      <span class="sub" id="rtCost">–</span>
+    </div>
+    <div class="route-sell" id="rtSellBox">
+      <span id="rtSellLbl">Si los vendes en Binance P2P recibes</span>
+      <b id="rtSell">–</b>
+      <span class="verdict" id="rtGain">–</span>
     </div>
   </section>
 
@@ -242,7 +298,37 @@ function render() {
   document.querySelectorAll("#chips button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === a)));
   $("tbl").innerHTML = [10, 20, 50, 100, 200, 500, 1000].map(m =>
     `<tr><td>$${m.toLocaleString("es-VE")}</td><td>${nf(m * bcv)}</td><td>${nf(m * p2p)}</td><td class="g">+${nf(m * (p2p - bcv))}</td></tr>`).join("");
-  fresh(); chart();
+  ruta(); fresh(); chart();
+}
+
+// Banco → Binance: Bs → $ en el banco → comisión de la tarjeta → comisión de Binance → USDT
+const pctTxt = v => (Math.round(v * 100) / 100).toLocaleString("es-VE", { maximumFractionDigits: 2 });
+function ruta() {
+  const bs = parseAmt($("rtBs").value) || 100000;
+  const tasa = parseAmt($("rtTasa").value) || R.bcv;
+  const pb = ($("rtBanco").value.trim() ? parseAmt($("rtBanco").value) : 2.5) / 100;
+  const pf = ($("rtBin").value.trim() ? parseAmt($("rtBin").value) : 4.1) / 100;
+  $("rtTasa").placeholder = nf(R.bcv);
+  if (!tasa) return;
+  const usd = bs / tasa;                 // dólares que compras en el banco
+  const cargo = usd / (1 + pb);          // lo que puedes pasar con la tarjeta (el banco suma su %)
+  const feeBanco = usd - cargo;
+  const feeBin = cargo * pf;             // Binance descuenta su % de lo que pasas
+  const usdt = cargo - feeBin;
+  const costo = bs / usdt;               // cuánto te sale cada USDT en bolívares
+  $("rt1").textContent = "$" + nf(usd);
+  $("rt2l").textContent = `Comisión de la tarjeta (${pctTxt(pb * 100)}%)`;
+  $("rt2").textContent = "−$" + nf(feeBanco);
+  $("rt3l").textContent = `Comisión de Binance (${pctTxt(pf * 100)}%) · pasas $${nf(cargo)}`;
+  $("rt3").textContent = "−$" + nf(feeBin);
+  $("rtUsdt").textContent = nf(usdt) + " USDT";
+  $("rtCost").textContent = `Cada USDT te sale en Bs ${nf(costo)} · pierdes ${nf((1 - usdt / usd) * 100, 1)}% en comisiones`;
+  const venta = usdt * R.p2p, gan = venta - bs, pct = gan / bs * 100;
+  $("rtSellLbl").textContent = `Si los vendes en Binance P2P (Bs ${nf(R.p2p)}) recibes`;
+  $("rtSell").textContent = "Bs " + nf(venta);
+  const v = $("rtGain");
+  v.textContent = gan >= 0 ? `Ganas Bs ${nf(gan)} (+${nf(pct, 1)}%) sobre tus Bs ${nf(bs, 0)}` : `Pierdes Bs ${nf(-gan)} (${nf(pct, 1)}%): no conviene a esta tasa`;
+  v.className = "verdict " + (gan >= 0 ? "up" : "down");
 }
 
 function chart() {
@@ -304,6 +390,11 @@ try { const t = localStorage.getItem("brecha-mi-tasa"); if (t) $("mine").value =
 $("mine").addEventListener("input", () => { saveMine(); render(); });
 $("mineClear").addEventListener("click", () => { $("mine").value = ""; saveMine(); render(); $("mine").focus(); });
 setInterval(fresh, 60000);
+// los datos de Banco → Binance se guardan en este teléfono
+["rtBs", "rtTasa", "rtBanco", "rtBin"].forEach(id => {
+  const v = lsGet("brecha-" + id); if (v) $(id).value = v;
+  $(id).addEventListener("input", () => { lsSet("brecha-" + id, $(id).value); ruta(); });
+});
 setMode(lsGet("brecha-modo") === "bs" ? "bs" : "usd");
 
 // tasas en vivo: rates.json se actualiza solo cada 30 minutos
